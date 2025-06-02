@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Export Report - Receipt Verifier</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+  <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* --- Paste your full COMMON_STYLES content here --- */
+    /* (Same CSS as index.html) */
+    :root { /* ... CSS variables ... */
+        --body-bg: #f8f9fc; --content-bg: #ffffff; --text-color: #5a6268; --heading-color: #343f56;
+        --border-color: #e3e6f0; --primary-color: #4e73df; --primary-hover-color: #2e59d9;
+        --success-color-text: #1cc88a; --success-bg: #d1e7dd; --success-border: #badbcc;
+        --error-color-text: #e74a3b; --error-bg: #f8d7da; --error-border: #f5c2c7;
+        --warning-color-text: #f6c23e; --warning-bg: #fff3cd; --warning-border: #ffeeba;
+        --nav-bg: #434a5e; --nav-link-color: rgba(255,255,255,0.85);
+        --nav-link-hover-bg: rgba(255,255,255,0.1); --shadow-sm: 0 .125rem .25rem rgba(0,0,0,.075);
+        --shadow-md: 0 .5rem 1rem rgba(0,0,0,.1); --border-radius: 0.35rem;
+    }
+    body { /* ... body styles ... */
+        font-family: "Nunito", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        margin: 0; background-color: var(--body-bg); color: var(--text-color);
+        line-height: 1.6; font-size: 1rem;
+    }
+    nav.main-nav { /* ... nav styles ... */
+        background-color: var(--nav-bg); padding: 0.75rem 1rem; color: var(--content-bg);
+        display: flex; justify-content: center; align-items: center; flex-wrap: wrap;
+        box-shadow: var(--shadow-sm);
+    }
+    nav.main-nav a, nav.main-nav button.nav-link-danger { /* ... nav link styles ... */
+        color: var(--nav-link-color); text-decoration: none; margin: 0.25rem 10px;
+        padding: 0.5rem 0.75rem; border-radius: var(--border-radius);
+        transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out; white-space: nowrap;
+        font-family: inherit; font-size: inherit; /* For button */
+    }
+    nav.main-nav button.nav-link-danger { /* Specific for button */
+        background:none; border:none; cursor:pointer;
+        color: var(--warning-color-text);
+    }
+    nav.main-nav a:hover, nav.main-nav a.active, nav.main-nav button.nav-link-danger:hover { /* ... nav hover ... */
+        color: var(--content-bg); background-color: var(--nav-link-hover-bg);
+    }
+    nav.main-nav button.nav-link-danger:hover { /* Specific hover for danger button */
+         color: var(--warning-hover-text);
+         background-color: var(--warning-hover-bg);
+    }
+    .content-wrapper { /* ... content wrapper styles ... */
+        width: 90%; max-width: 800px; margin: 2.5rem auto; padding: 2rem;
+        background-color: var(--content-bg); box-shadow: var(--shadow-md); border-radius: var(--border-radius);
+    }
+    h2, h3 { color: var(--heading-color); margin-top: 0; font-weight: 400; }
+    h2 { margin-bottom: 1.5rem; font-size: 1.8rem; }
+    h3 { margin-bottom: 1rem; font-size: 1.4rem; }
+    input[type="text"], input[type="number"] { /* ... input styles ... */
+        width: 100%; padding: 0.75rem; margin-bottom: 1rem;
+        border: 1px solid var(--border-color); border-radius: var(--border-radius);
+        box-sizing: border-box; font-size: 1rem; line-height: 1.5; color: var(--text-color);
+        transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+    }
+    input[type="text"]:focus, input[type="number"]:focus { /* ... input focus ... */
+        border-color: var(--primary-color); outline: 0;
+        box-shadow: 0 0 0 0.2rem rgba(78, 115, 223,.25);
+    }
+    .form-group { margin-bottom: 1rem; }
+    label { display: block; margin-bottom: .5rem; font-weight: 600; color: var(--heading-color); }
+    .button, input[type="submit"], button { /* ... button styles ... */
+        display: inline-block; font-weight: 600; color: var(--content-bg);
+        text-align: center; vertical-align: middle; cursor: pointer; user-select: none;
+        background-color: var(--primary-color); border: 1px solid var(--primary-color);
+        padding: 0.6rem 1.2rem; font-size: 0.95rem; line-height: 1.5;
+        border-radius: var(--border-radius);
+        transition: background-color .15s ease-in-out,border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+        text-decoration: none; box-shadow: var(--shadow-sm);
+    }
+    .button:hover, input[type="submit"]:hover, button:hover { /* ... button hover ... */
+        background-color: var(--primary-hover-color); border-color: var(--primary-hover-color);
+        color: var(--content-bg); box-shadow: 0 .125rem .5rem rgba(0,0,0,.1);
+    }
+    .flash-messages { list-style-type: none; padding: 0; margin-bottom: 1rem; }
+    .flash-messages li {
+        padding: 0.75rem 1.25rem; margin-bottom: 1rem;
+        border: 1px solid transparent; border-radius: var(--border-radius);
+    }
+    .flash-messages li.warning { color: #664d03; background-color: var(--warning-bg); border-color: var(--warning-border); }
+  </style>
+</head>
+<body>
+  <nav class="main-nav">
+    <a href="{{ url_for('index') }}">🏠 Scanner</a>
+    <a href="{{ url_for('history') }}">📜 History</a>
+    <a href="{{ url_for('manage_trucks') }}">🚚 Manage Trucks</a>
+    <a href="{{ url_for('export_options_page') }}" class="active">📊 Export Report</a>
+    <form action="{{ url_for('delete_all_scans') }}" method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete ALL SCAN records? This action cannot be undone.');">
+        <button type="submit" class="nav-link-danger">🗑️ Delete All Scans</button>
+    </form>
+  </nav>
+
+  <div class="content-wrapper">
+    <h2>Export Scan Report</h2>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <ul class="flash-messages">
+        {% for category, message in messages %}
+          <li class="{{ category }}">{{ message }}</li>
+        {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="{{ url_for('download_excel_report') }}">
+      <div class="form-group">
+        <label for="price_per_load">Price Per Load/Receipt (for total value calculation):</label>
+        <input type="number" name="price_per_load" id="price_per_load" step="0.01" min="0" value="0.00" required>
+        <small>Enter a numeric value (e.g., 150.75). This will be used to calculate total values.</small>
+      </div>
+      <button type="submit" class="button">Download Excel Report</button>
+    </form>
+
+    <p style="margin-top: 2rem; font-size: 0.9em; color: var(--text-color);">
+      The generated Excel report will contain three sheets:
+      <ul>
+        <li><strong>All Scans Detailed:</strong> A complete list of every receipt scan, including serial number, QR timestamp, system timestamp, associated truck number, and the load value.</li>
+        <li><strong>Summary by Truck:</strong> A summary showing each truck number, the total number of receipts redeemed by that truck, and the total calculated value for that truck.</li>
+        <li><strong>Overall Summary:</strong> Grand totals for all receipts scanned and the total calculated value across all trucks.</li>
+      </ul>
+    </p>
+  </div>
+</body>
+</html>

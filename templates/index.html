@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Receipt Verifier - Scanner</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+  <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+  <style>
+    :root {
+        --body-bg: #f8f9fc;
+        --content-bg: #ffffff;
+        --text-color: #5a6268;
+        --heading-color: #343f56;
+        --border-color: #e3e6f0;
+        --primary-color: #4e73df;
+        --primary-hover-color: #2e59d9;
+        --success-color-text: #1cc88a;
+        --error-color-text: #e74a3b;
+        --warning-color-text: #f6c23e;
+        --warning-hover-text: #4A3B12;
+        --warning-hover-bg: #fff4cc;
+        --nav-bg: #434a5e;
+        --nav-link-color: rgba(255,255,255,0.85);
+        --nav-link-hover-bg: rgba(255,255,255,0.1);
+        --shadow-sm: 0 .125rem .25rem rgba(0,0,0,.075);
+        --shadow-md: 0 .5rem 1rem rgba(0,0,0,.1);
+        --border-radius: 0.35rem;
+    }
+    body {
+        font-family: "Nunito", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        margin: 0; background-color: var(--body-bg); color: var(--text-color);
+        line-height: 1.6; font-size: 1rem;
+    }
+    nav.main-nav {
+        background-color: var(--nav-bg); padding: 0.75rem 1rem; color: var(--content-bg);
+        display: flex; justify-content: center; align-items: center; flex-wrap: wrap;
+        box-shadow: var(--shadow-sm);
+    }
+    nav.main-nav a, nav.main-nav button.nav-link-danger {
+        color: var(--nav-link-color); text-decoration: none; margin: 0.25rem 10px;
+        padding: 0.5rem 0.75rem; border-radius: var(--border-radius);
+        transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out; white-space: nowrap;
+        font-family: inherit; font-size: inherit;
+    }
+    nav.main-nav button.nav-link-danger {
+        background:none; border:none; cursor:pointer;
+        color: var(--warning-color-text);
+    }
+    nav.main-nav a:hover, nav.main-nav a.active, nav.main-nav button.nav-link-danger:hover {
+        color: var(--content-bg); background-color: var(--nav-link-hover-bg);
+    }
+    nav.main-nav button.nav-link-danger:hover {
+         color: var(--warning-hover-text);
+         background-color: var(--warning-hover-bg);
+    }
+    .content-wrapper {
+        width: 90%; max-width: 800px; margin: 2.5rem auto; padding: 2rem;
+        background-color: var(--content-bg); box-shadow: var(--shadow-md); border-radius: var(--border-radius);
+    }
+    h2, h3 { color: var(--heading-color); margin-top: 0; font-weight: 400; }
+    h2 { margin-bottom: 1.5rem; font-size: 1.8rem; }
+    h3 { margin-bottom: 1rem; font-size: 1.4rem; }
+    textarea, input[type="text"], select {
+        width: 100%; padding: 0.75rem; margin-bottom: 1rem;
+        border: 1px solid var(--border-color); border-radius: var(--border-radius);
+        box-sizing: border-box; font-size: 1rem; line-height: 1.5; color: var(--text-color);
+        transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+        background-color: var(--content-bg);
+    }
+    textarea:focus, input[type="text"]:focus, select:focus {
+        border-color: var(--primary-color); outline: 0;
+        box-shadow: 0 0 0 0.2rem rgba(78, 115, 223,.25);
+    }
+    .form-group { margin-bottom: 1rem; }
+    label { display: inline-block; margin-bottom: .5rem; font-weight: 600; color: var(--heading-color); }
+    .button, input[type="submit"], button {
+        display: inline-block; font-weight: 600; color: var(--content-bg);
+        text-align: center; vertical-align: middle; cursor: pointer; user-select: none;
+        background-color: var(--primary-color); border: 1px solid var(--primary-color);
+        padding: 0.6rem 1.2rem; font-size: 0.95rem; line-height: 1.5;
+        border-radius: var(--border-radius);
+        transition: background-color .15s ease-in-out,border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+        text-decoration: none; box-shadow: var(--shadow-sm);
+    }
+    #manualSubmitButton { display: none; } 
+
+    .button:hover, input[type="submit"]:hover, button:hover {
+        background-color: var(--primary-hover-color); border-color: var(--primary-hover-color);
+        color: var(--content-bg); box-shadow: 0 .125rem .5rem rgba(0,0,0,.1);
+    }
+    .button-danger, input[type="submit"].button-danger {
+        background-color: var(--error-color-text); border-color: var(--error-color-text);
+    }
+    .button-danger:hover, input[type="submit"].button-danger:hover { background-color: #c82333; border-color: #bd2130; }
+    .button-secondary { background-color: #858796; border-color: #858796; }
+    .button-secondary:hover { background-color: #6e707e; border-color: #6e707e; }
+    .scanner-area { margin-top: 1.5rem; margin-bottom: 1.5rem; text-align: center; }
+    #preview {
+        border: 1px solid var(--border-color); border-radius: var(--border-radius);
+        max-width: 100%; height: auto; background-color: #eef0f3;
+        display: block; margin-left: auto; margin-right: auto; width: 320px;
+    }
+    #cam-status { font-style: italic; color: #858796; font-size: 0.9em; margin-top: 0.5rem; }
+    .modal {
+        display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%;
+        overflow: auto; background-color: rgba(0,0,0,0.4);
+        align-items: center; justify-content: center;
+    }
+    .modal-content {
+        background-color: var(--content-bg); padding: 25px; border: 1px solid var(--border-color);
+        width: 85%; max-width: 500px; border-radius: var(--border-radius); box-shadow: var(--shadow-md);
+        position: relative; animation: modalopen 0.3s ease-out;
+    }
+    @keyframes modalopen { from {opacity: 0; transform: scale(0.95) translateY(-20px);} to {opacity: 1; transform: scale(1) translateY(0);} }
+    .modal-close-button {
+        color: #aaa; font-size: 28px; font-weight: bold; line-height: 1;
+        position: absolute; top: 10px; right: 15px;
+    }
+    .modal-close-button:hover, .modal-close-button:focus { color: var(--heading-color); text-decoration: none; cursor: pointer; }
+    #modalTitle { margin-top: 0; font-size: 1.6rem; margin-bottom: 15px; font-weight: 500; }
+    .modal-content.modal-success #modalTitle { color: var(--success-color-text); }
+    .modal-content.modal-error #modalTitle { color: var(--error-color-text); }
+    #modalBody { font-size: 1rem; line-height: 1.6; }
+    #modalBody .serial-highlight-modal {
+        font-size: 1.3rem; font-weight: 600; color: var(--primary-color);
+        display: block; margin-bottom: 0.75rem; padding: 8px; background-color: #e9ecef; border-radius: var(--border-radius);
+    }
+    #modalBody pre {
+        white-space: pre-wrap; word-wrap: break-word; background-color: #f8f9fa; padding: 12px;
+        border-radius: var(--border-radius); border: 1px solid var(--border-color);
+        font-family: "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        font-size: 0.9rem; max-height: 200px; overflow-y: auto; color: var(--text-color);
+    }
+    .text-center { text-align: center; }
+    .mt-3 { margin-top: 1rem !important; }
+    .mb-3 { margin-bottom: 1rem !important; }
+    .server-messages { display: none; }
+    .template-debug { display: none; /* Hidden by default now */ }
+    #other_truck_input_container { display: none; margin-top: -0.5rem; margin-bottom: 1rem; }
+  </style>
+</head>
+<body>
+  <div class="template-debug">
+    Data from Flask: result_message=[{{ result_message }}], error_message=[{{ error_message }}],
+    submitted_truck_select=[{{ submitted_truck_select }}], submitted_truck_other=[{{ submitted_truck_other }}]
+  </div>
+
+  <nav class="main-nav">
+    <a href="{{ url_for('index') }}" class="active">🏠 Scanner</a>
+    <a href="{{ url_for('history') }}">📜 History</a>
+    <a href="{{ url_for('manage_trucks') }}">🚚 Manage Trucks</a>
+    <a href="{{ url_for('export_options_page') }}">📊 Export Report</a>
+    <form action="{{ url_for('delete_all_scans') }}" method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete ALL SCAN records? This action cannot be undone.');">
+        <button type="submit" class="nav-link-danger">🗑️ Delete All Scans</button>
+    </form>
+  </nav>
+  <div class="content-wrapper">
+    <h2>Verify Encrypted Receipt QR</h2>
+    <form method="post" action="{{ url_for('verify') }}" id="verifyForm">
+      <div class="form-group">
+        <label for="encrypted">Encrypted QR Data:</label>
+        <textarea name="encrypted" id="encrypted" rows="3" placeholder="Paste or scan encrypted QR string here..." required></textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="truck_number_select">Truck Number (Optional):</label>
+        <select name="truck_number_select" id="truck_number_select">
+          <option value="">-- Select Truck (Optional) --</option>
+          {% if truck_numbers_master %}
+            {% for truck_row in truck_numbers_master %}
+              <option value="{{ truck_row.truck_number }}" 
+                      {% if submitted_truck_select == truck_row.truck_number %}selected{% endif %}>
+                {{ truck_row.truck_number }}
+              </option>
+            {% endfor %}
+          {% endif %}
+          <option value="_other_" {% if submitted_truck_select == '_other_' %}selected{% endif %}>
+            Other (Specify Below)
+          </option>
+        </select>
+      </div>
+      <div id="other_truck_input_container" class="form-group">
+        <label for="truck_number_other">Specify Other Truck Number:</label>
+        <input type="text" name="truck_number_other" id="truck_number_other" 
+               placeholder="Enter Custom Truck No." 
+               value="{{ submitted_truck_other if submitted_truck_other is not none else '' }}">
+      </div>
+
+      <input type="submit" value="Verify Data" class="button" id="manualSubmitButton">
+    </form>
+    <h3 class="mt-3">Scan with Camera:</h3>
+    <div class="scanner-area">
+      <video id="preview" autoplay playsinline muted></video>
+      <canvas id="canvas" hidden></canvas>
+    </div>
+    <p class="text-center" id="cam-status">Initializing camera...</p>
+  </div>
+
+  <div id="serverMessages" class="server-messages"
+       data-result="{{ result_message if result_message is not none else '' }}"
+       data-error="{{ error_message if error_message is not none else '' }}">
+  </div>
+
+  <div id="resultModal" class="modal">
+    <div class="modal-content">
+      <span class="modal-close-button">×</span>
+      <h3 id="modalTitle">Verification Result</h3>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <script>
+    console.log("JS: Main page script started.");
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log("JS: DOM fully loaded and parsed.");
+
+        const truckSelect = document.getElementById('truck_number_select');
+        const otherTruckInputContainer = document.getElementById('other_truck_input_container');
+        const otherTruckInput = document.getElementById('truck_number_other');
+        const verifyForm = document.getElementById('verifyForm');
+        const textBox = document.getElementById('encrypted');
+        const camStatus = document.getElementById('cam-status');
+
+        function toggleOtherTruckInput() {
+            if (truckSelect && otherTruckInputContainer) {
+                const showOther = truckSelect.value === '_other_';
+                otherTruckInputContainer.style.display = showOther ? 'block' : 'none';
+                if (showOther && otherTruckInput) {
+                    otherTruckInput.focus();
+                }
+                // No else to clear otherTruckInput here, value is set by Flask for stickiness
+            }
+        }
+
+        if (truckSelect) {
+            truckSelect.addEventListener('change', toggleOtherTruckInput);
+            toggleOtherTruckInput(); // Call on load to set initial display based on Flask's pre-selection
+        } else { console.warn("JS: Truck select or other input container not found."); }
+
+        const video = document.getElementById('preview');
+        const canvasElement = document.getElementById('canvas');
+        const canvas = canvasElement ? canvasElement.getContext('2d') : null;
+        
+        let streamActive = false;
+        let scanSubmissionPending = false;
+
+        function startScan() {
+            if (camStatus) camStatus.textContent = "startScan() called. Checking mediaDevices...";
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                if (camStatus) camStatus.textContent = "⚠️ Camera API not supported. Paste data manually.";
+                if(video) video.style.display = 'none'; return;
+            }
+            if (camStatus) camStatus.textContent = "Requesting camera access...";
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+            .then(stream => {
+                if (camStatus) camStatus.textContent = "Camera access granted. Setting up video...";
+                if (!video) { console.error("JS: Video element missing"); return; }
+                video.srcObject = stream;
+                video.onloadedmetadata = () => {
+                    video.play().catch(e => console.error("JS: Video play failed:", e));
+                };
+                streamActive = true;
+                scanSubmissionPending = false; 
+                if(camStatus) camStatus.textContent = "Camera active. Point at QR code.";
+                requestAnimationFrame(tick);
+                if (video) video.style.display = 'block';
+            })
+            .catch(err => {
+                console.error("JS: getUserMedia() FAILED:", err.name, "-", err.message);
+                let msg = `⚠️ Camera error: ${err.name}. Check permissions.`;
+                if (err.name === "NotFoundError") msg = "⚠️ No camera found.";
+                if (err.name === "NotAllowedError") msg = "⚠️ Camera permission denied.";
+                if (camStatus) camStatus.textContent = msg + " Paste data manually.";
+                if(video) video.style.display = 'none';
+            });
+        }
+
+        let lastScannedCode = null; let lastScanTime = 0; const scanCooldown = 2500;
+
+        function tick() {
+          if (!streamActive || scanSubmissionPending) { requestAnimationFrame(tick); return; }
+          if (video && video.readyState === video.HAVE_ENOUGH_DATA && video.videoWidth > 0) {
+            if (canvasElement && canvas) {
+                canvasElement.height = video.videoHeight; canvasElement.width = video.videoWidth;
+                canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
+                try {
+                    const imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
+                    const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
+                    if (code && code.data.trim() !== "") {
+                        const currentTime = Date.now();
+                        if (textBox && (code.data !== lastScannedCode || (currentTime - lastScanTime) > scanCooldown)) {
+                            textBox.value = code.data;
+                            lastScannedCode = code.data;
+                            lastScanTime = currentTime;
+                            video.style.outline = "3px solid var(--success-color-text, #1cc88a)";
+                            if(camStatus) camStatus.textContent = "QR Read... Verifying...";
+                            
+                            scanSubmissionPending = true;
+                            console.log("JS: Auto-submitting form with QR data:", code.data);
+                            if (verifyForm) verifyForm.submit();
+                            else console.error("JS: Verify form not found for auto-submit!");
+                        }
+                    }
+                } catch (e) { /* console.warn("jsQR error:", e); */ }
+            }
+          }
+          requestAnimationFrame(tick);
+        }
+
+        if (video && camStatus) { console.log("JS: Attempting to call startScan()."); startScan(); }
+        else { if(camStatus) camStatus.textContent = "Error: Page setup incomplete for camera."; }
+
+        const resultModal = document.getElementById('resultModal');
+        const modalCloseButton = resultModal ? resultModal.querySelector('.modal-close-button') : null;
+        const modalTitleElem = document.getElementById('modalTitle');
+        const modalBodyElem = document.getElementById('modalBody');
+        const modalContent = resultModal ? resultModal.querySelector('.modal-content') : null;
+
+        function showModal(title, bodyHtml, isError) {
+            console.log("JS: showModal called. Title:", title, "isError:", isError);
+            if (!resultModal || !modalTitleElem || !modalBodyElem || !modalContent) { return; }
+            modalTitleElem.textContent = title;
+            modalBodyElem.innerHTML = bodyHtml;
+            modalContent.classList.remove('modal-success', 'modal-error');
+            modalContent.classList.add(isError ? 'modal-error' : 'modal-success');
+            resultModal.style.display = 'flex';
+        }
+        function closeModal() {
+            if(resultModal) resultModal.style.display = 'none';
+            if (textBox) textBox.value = ''; // Clear QR data FOR NEXT SCAN
+            // Truck selection is kept sticky by Flask re-rendering the page with previous values
+            lastScannedCode = null;
+            scanSubmissionPending = false; 
+            if(camStatus && streamActive) camStatus.textContent = "Camera active. Ready for next scan...";
+            else if (camStatus) camStatus.textContent = "Ready for next scan (camera may be off)...";
+            if(video) video.style.outline = "1px solid var(--border-color, #e3e6f0)";
+        }
+        if (modalCloseButton) { modalCloseButton.onclick = closeModal; }
+        if (resultModal) { resultModal.onclick = function(event) { if (event.target == resultModal) closeModal(); }; }
+        document.addEventListener('keydown', function(event) { if (resultModal && event.key === "Escape" && resultModal.style.display === 'flex') closeModal(); });
+
+        const messagesDiv = document.getElementById('serverMessages');
+        if (messagesDiv) {
+            const serverResult = messagesDiv.dataset.result || null;
+            const serverError = messagesDiv.dataset.error || null;
+
+            if (serverResult && serverResult.trim() !== "") {
+                let html = ''; const lines = serverResult.split('\n');
+                const sl = lines.find(l => l.startsWith("Serial No:"));
+                if (sl) html += `<span class="serial-highlight-modal">${sl.split(': ')[1]}</span>`;
+                html += `<pre>${serverResult}</pre>`;
+                showModal('✅ Verification Success', html, false);
+            } else if (serverError && serverError.trim() !== "") {
+                showModal('❌ Verification Error', `<pre>${serverError}</pre>`, true);
+            } else {
+                 console.log("JS: No server messages for modal on this page load.");
+                 if (textBox && !sessionStorage.getItem('formSubmitted')) { // Clear only on true initial load
+                     textBox.value = '';
+                 }
+            }
+        }
+        sessionStorage.removeItem('formSubmitted'); // Clear flag after use
+        if(verifyForm){
+            verifyForm.addEventListener('submit', () => sessionStorage.setItem('formSubmitted', 'true'));
+        }
+    });
+    console.log("JS: Main page script finished initial setup.");
+  </script>
+</body>
+</html>
