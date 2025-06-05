@@ -1,0 +1,7 @@
+Flask
+Flask-SQLAlchemy
+Flask-CORS
+psycopg2-binary  # For PostgreSQL
+gunicorn         # WSGI server Render will use
+cryptography     # For Fernet
+# Add any other libraries you use
